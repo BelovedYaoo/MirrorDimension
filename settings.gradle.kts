@@ -23,7 +23,8 @@ stonecutter {
     centralScript = "build.gradle.kts"
 
     create(rootProject) {
-        // 先以 1.20.1 Forge 作为基准变体，后续在此追加 1.19.2 / 1.21.1 / Fabric 等目标。
+        // 先以 1.20.1 Forge 作为基准变体，后续在此追加 1.21.1 / Fabric 等目标。
+        vers("1.19.2-forge", "1.19.2")
         vers("1.20.1-forge", "1.20.1")
 
         // src/ 以该变体的代码形态提交，其它变体由 Stonecutter 预处理生成

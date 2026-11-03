@@ -18,6 +18,7 @@ import net.minecraftforge.common.util.ITeleporter;
 import org.slf4j.Logger;
 import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMDimensions;
+import top.prefersmin.mirrordim.util.MinecraftCompat;
 
 import java.util.function.Function;
 
@@ -65,7 +66,7 @@ public class PortalTracksSupport {
         if (portalinfo == null)
             return null;
 
-        BlockPos otherPortalPos = BlockPos.containing(portalinfo.pos);
+        BlockPos otherPortalPos = MinecraftCompat.blockPos(portalinfo.pos);
         BlockState otherPortalState = otherLevel.getBlockState(otherPortalPos);
         if (otherPortalState.getBlock() != portalState.getBlock())
             return null;

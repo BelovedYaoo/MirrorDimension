@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.BlockUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +20,6 @@ import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.portal.PortalInfo;
-import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.ITeleporter;
 import top.prefersmin.mirrordim.MirrorDimension;
@@ -30,6 +28,7 @@ import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.registry.PMPointOfInterests;
+import top.prefersmin.mirrordim.util.MinecraftCompat;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
@@ -58,27 +57,27 @@ public class ChordPortalForcer implements ITeleporter {
 
         boolean isChord = destinationLevel.dimension() == PMDimensions.CHORD_LEVEL;
 
-        if (entity.level().dimension() != PMDimensions.CHORD_LEVEL && !isChord) {
+        if (MinecraftCompat.level(entity).dimension() != PMDimensions.CHORD_LEVEL && !isChord) {
             return null;
         } else {
             WorldBorder worldBorder = destinationLevel.getWorldBorder();
-            double scale = DimensionType.getTeleportationScale(entity.level().dimensionType(), destinationLevel.dimensionType());
+            double scale = DimensionType.getTeleportationScale(MinecraftCompat.level(entity).dimensionType(), destinationLevel.dimensionType());
             BlockPos scaledEntityPos = worldBorder.clampToBounds(entity.getX() * scale, entity.getY(), entity.getZ() * scale);
             return this.getExitPortal(entity, scaledEntityPos, worldBorder).map((rectangle) -> {
                 EntityAccessor accessor = (EntityAccessor) entity;
                 BlockPos entrancePos = accessor.getPortalEntrancePos();
-                BlockState blockState = entity.level().getBlockState(entrancePos);
+                BlockState blockState = MinecraftCompat.level(entity).getBlockState(entrancePos);
                 Direction.Axis axis;
                 Vec3 vec3;
                 if (blockState.hasProperty(BlockStateProperties.HORIZONTAL_AXIS)) {
                     axis = blockState.getValue(BlockStateProperties.HORIZONTAL_AXIS);
-                    BlockUtil.FoundRectangle foundRectangle = BlockUtil.getLargestRectangleAround(entrancePos, axis, 21, Direction.Axis.Y, 21, (blockPos) -> entity.level().getBlockState(blockPos) == blockState);
+                    BlockUtil.FoundRectangle foundRectangle = BlockUtil.getLargestRectangleAround(entrancePos, axis, 21, Direction.Axis.Y, 21, (blockPos) -> MinecraftCompat.level(entity).getBlockState(blockPos) == blockState);
                     vec3 = accessor.callGetRelativePortalPosition(axis, foundRectangle);
                 } else {
                     axis = Direction.Axis.X;
                     vec3 = new Vec3(0.5, 0.0, 0.0);
                 }
-                return PortalShape.createPortalInfo(destinationLevel, rectangle, axis, vec3, entity, entity.getDeltaMovement(), entity.getYRot(), entity.getXRot());
+                return MinecraftCompat.createPortalInfo(destinationLevel, rectangle, axis, vec3, entity, entity.getDeltaMovement(), entity.getYRot(), entity.getXRot());
             }).orElse(null);
         }
     }
@@ -90,7 +89,7 @@ public class ChordPortalForcer implements ITeleporter {
                 return optional;
             } else {
                 BlockPos entrancePos = ((EntityAccessor) entity).getPortalEntrancePos();
-                Direction.Axis direction$axis = entity.level().getBlockState(entrancePos).getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
+                Direction.Axis direction$axis = MinecraftCompat.level(entity).getBlockState(entrancePos).getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
                 Optional<BlockUtil.FoundRectangle> portalOptional = this.createPortal(findFrom, direction$axis);
                 if (portalOptional.isEmpty()) {
                     LOGGER.warn("无法创建弦世界传送门，目标位置可能超出世界边界");
@@ -106,7 +105,7 @@ public class ChordPortalForcer implements ITeleporter {
     private Optional<BlockUtil.FoundRectangle> findPortalAround(BlockPos pos, WorldBorder worldBorder) {
         PoiManager poiManager = this.level.getPoiManager();
         poiManager.ensureLoadedAndValid(this.level, pos, 128);
-        ResourceLocation portal = BuiltInRegistries.POINT_OF_INTEREST_TYPE.getKey(PMPointOfInterests.CHORD_PORTAL.get());
+        ResourceLocation portal = net.minecraftforge.registries.ForgeRegistries.POI_TYPES.getKey(PMPointOfInterests.CHORD_PORTAL.get());
         if (portal != null) {
             Optional<PoiRecord> optionalPoi = poiManager.getInSquare((poiType) -> poiType.is(portal), pos, 128, PoiManager.Occupancy.ANY)
                     .filter((poiRecord) -> worldBorder.isWithinBounds(poiRecord.getPos()))
@@ -223,7 +222,7 @@ public class ChordPortalForcer implements ITeleporter {
             for (int j = -1; j < 4; ++j) {
                 offsetPos.setWithOffset(originalPos, direction.getStepX() * i + clockWiseDirection.getStepX() * offsetScale, j, direction.getStepZ() * i + clockWiseDirection.getStepZ() * offsetScale);
                 BlockState blockState = this.level.getBlockState(offsetPos);
-                if (j < 0 && (!blockState.isSolid())) {
+                if (j < 0 && (!MinecraftCompat.isSolid(blockState))) {
                     return false;
                 }
                 if (j >= 0 && !this.level.isEmptyBlock(offsetPos)) {

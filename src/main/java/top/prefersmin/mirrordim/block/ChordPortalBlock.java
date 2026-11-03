@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -35,6 +34,7 @@ import top.prefersmin.mirrordim.MirrorDimension;
 import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
+import top.prefersmin.mirrordim.util.MinecraftCompat;
 import top.prefersmin.mirrordim.world.ChordPortalForcer;
 
 import javax.annotation.Nullable;
@@ -47,13 +47,7 @@ public class ChordPortalBlock extends Block {
     protected static final VoxelShape Z_AABB = Block.box(6.0D, 0.0D, 0.0D, 10.0D, 16.0D, 16.0D);
 
     public ChordPortalBlock() {
-        super(Properties.of()
-                .pushReaction(PushReaction.BLOCK)
-                .strength(-1F)
-                .noCollission()
-                .lightLevel((state) -> 10)
-                .noLootTable()
-        );
+        super(MinecraftCompat.portalProperties());
         registerDefaultState(stateDefinition.any().setValue(AXIS, Direction.Axis.X));
     }
 
@@ -112,19 +106,19 @@ public class ChordPortalBlock extends Block {
                 entity.setPortalCooldown();
             } else {
                 EntityAccessor accessor = (EntityAccessor) entity;
-                if (!entity.level().isClientSide() && !pos.equals(accessor.getPortalEntrancePos())) {
+                if (!MinecraftCompat.level(entity).isClientSide() && !pos.equals(accessor.getPortalEntrancePos())) {
                     accessor.setPortalEntrancePos(pos.immutable());
                 }
-                Level level1 = entity.level();
+                Level level1 = MinecraftCompat.level(entity);
                 MinecraftServer minecraftserver = level1.getServer();
-                ResourceKey<Level> destination = entity.level().dimension() == PMDimensions.CHORD_LEVEL ? Level.OVERWORLD : PMDimensions.CHORD_LEVEL;
+                ResourceKey<Level> destination = MinecraftCompat.level(entity).dimension() == PMDimensions.CHORD_LEVEL ? Level.OVERWORLD : PMDimensions.CHORD_LEVEL;
                 if (minecraftserver != null) {
                     ServerLevel destinationWorld = minecraftserver.getLevel(destination);
                     if (destinationWorld != null && !entity.isPassenger()) {
-                        entity.level().getProfiler().push("chord_portal");
+                        MinecraftCompat.level(entity).getProfiler().push("chord_portal");
                         entity.setPortalCooldown();
                         entity.changeDimension(destinationWorld, new ChordPortalForcer(destinationWorld));
-                        entity.level().getProfiler().pop();
+                        MinecraftCompat.level(entity).getProfiler().pop();
                     }
                 }
             }

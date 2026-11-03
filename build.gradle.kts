@@ -11,16 +11,18 @@ val modIdConst = "mirrordim"
 
 // 1.20.1 运行时是 Java 17；Modstitch 要求构建 JVM 至少为 21
 val javaTargetVersion = when (minecraft) {
-    "1.20.1" -> 17
+    "1.19.2", "1.20.1" -> 17
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记 Java 版本")
 }
 
 val resourcePackFormat = when (minecraft) {
+    "1.19.2" -> 9
     "1.20.1" -> 15
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记资源包格式")
 }
 
 val dataPackFormat = when (minecraft) {
+    "1.19.2" -> 9
     "1.20.1" -> 15
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记数据包格式")
 }
@@ -33,6 +35,13 @@ data class LoaderManifest(
 )
 
 val loaderManifest = when (minecraft) {
+    "1.19.2" -> LoaderManifest(
+        modId = "forge",
+        versionRange = "[43,)",
+        languageVersion = "[43,)",
+        minecraftVersionRange = "[1.19.2,1.20)",
+    )
+
     "1.20.1" -> LoaderManifest(
         modId = "forge",
         versionRange = "[47,)",
@@ -106,7 +115,10 @@ stonecutter {
 
 dependencies {
     // Create 是可选兼容：编译期需要，运行期不强制安装
-    modCompileOnly("curse.maven:create-328085:4835191")
+    when (minecraft) {
+        "1.19.2" -> modCompileOnly("maven.modrinth:create:tJVykywJ")
+        "1.20.1" -> modCompileOnly("curse.maven:create-328085:4835191")
+    }
 
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
 }

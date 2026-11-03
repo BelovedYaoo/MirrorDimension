@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -17,7 +18,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.NetherPortalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -71,7 +71,10 @@ public class ChordPortalBlock extends Block {
         LevelAccessor level = context.getLevel();
         PMPortalShape size = this.isPortal(level, pos);
         if (size != null && !onTrySpawnPortal(level, pos, size)) {
-            size.createPortalBlocks();
+            // 客户端只做预测，真正放置方块交给服务端，避免双端各放一次
+            if (!context.getLevel().isClientSide()) {
+                size.createPortalBlocks();
+            }
             return true;
         } else {
             return false;
@@ -115,8 +118,8 @@ public class ChordPortalBlock extends Block {
                 ResourceKey<Level> destination = entity.level().dimension() == PMDimensions.CHORD_LEVEL ? Level.OVERWORLD : PMDimensions.CHORD_LEVEL;
                 if (minecraftserver != null) {
                     ServerLevel destinationWorld = minecraftserver.getLevel(destination);
-                    if (destinationWorld != null && minecraftserver.isNetherEnabled() && !entity.isPassenger()) {
-                        entity.level().getProfiler().push("undergarden_portal");
+                    if (destinationWorld != null && !entity.isPassenger()) {
+                        entity.level().getProfiler().push("chord_portal");
                         entity.setPortalCooldown();
                         entity.changeDimension(destinationWorld, new ChordPortalForcer(destinationWorld));
                         entity.level().getProfiler().pop();
@@ -183,7 +186,7 @@ public class ChordPortalBlock extends Block {
     }
 
     public static class PMPortalShape extends PortalShape {
-        private static final int MIN_WIDTH = 1;
+        private static final int MIN_WIDTH = 2;
         public static final int MAX_WIDTH = 21;
         private static final int MIN_HEIGHT = 2;
         public static final int MAX_HEIGHT = 21;
@@ -236,7 +239,7 @@ public class ChordPortalBlock extends Block {
             for (int i = 0; i <= MAX_WIDTH; ++i) {
                 mutablePos.set(pos).move(direction, i);
                 BlockState blockstate = this.level.getBlockState(mutablePos);
-                if (!blockstate.is(Blocks.AIR)) {
+                if (!isEmpty(blockstate)) {
                     if (FRAME.test(blockstate, this.level, mutablePos)) {
                         return i;
                     }
@@ -284,11 +287,11 @@ public class ChordPortalBlock extends Block {
                 for (int j = 0; j < this.width; ++j) {
                     pos.set(this.bottomLeft).move(Direction.UP, i).move(this.rightDir, j);
                     BlockState blockstate = this.level.getBlockState(pos);
-                    if (!blockstate.is(Blocks.AIR)) {
+                    if (!isEmpty(blockstate)) {
                         return i;
                     }
 
-                    if (blockstate.is(Blocks.NETHER_PORTAL)) {
+                    if (blockstate.is(PMBlocks.CHORD_PORTAL.get())) {
                         ++this.numPortalBlocks;
                     }
                 }
@@ -298,7 +301,7 @@ public class ChordPortalBlock extends Block {
         }
 
         private static boolean isEmpty(BlockState state) {
-            return state.isAir() || state.is(PMBlocks.CHORD_PORTAL.get());
+            return state.isAir() || state.is(BlockTags.FIRE) || state.is(PMBlocks.CHORD_PORTAL.get());
         }
 
         public boolean isValid() {
@@ -306,7 +309,7 @@ public class ChordPortalBlock extends Block {
         }
 
         public void createPortalBlocks() {
-            BlockState blockstate = PMBlocks.CHORD_PORTAL.get().defaultBlockState().setValue(NetherPortalBlock.AXIS, this.axis);
+            BlockState blockstate = PMBlocks.CHORD_PORTAL.get().defaultBlockState().setValue(AXIS, this.axis);
             BlockPos.betweenClosed(this.bottomLeft, this.bottomLeft.relative(Direction.UP, this.height - 1).relative(this.rightDir, this.width - 1)).forEach(pos -> this.level.setBlock(pos, blockstate, 18));
         }
 

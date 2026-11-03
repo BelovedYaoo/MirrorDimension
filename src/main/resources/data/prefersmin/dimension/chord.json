@@ -4,6 +4,7 @@
     "type": "minecraft:flat",
     "settings": {
       "biome": "minecraft:plains",
+      "features": true,
       "layers": [
         {
           "block": "minecraft:deepslate",
@@ -21,9 +22,6 @@
           "block": "minecraft:grass_block",
           "height": 1
         }
-      ],
-      "structure_overrides": [
-        ""
       ]
     }
   }

@@ -1,5 +1,6 @@
 package top.prefersmin.mirrordim.world;
 
+import com.mojang.logging.LogUtils;
 import com.simibubi.create.content.contraptions.glue.SuperGlueEntity;
 import com.simibubi.create.foundation.utility.BlockFace;
 import com.simibubi.create.foundation.utility.Pair;
@@ -14,11 +15,14 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.util.ITeleporter;
+import org.slf4j.Logger;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 
 import java.util.function.Function;
 
 public class PortalTracksSupport {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static Pair<ServerLevel, BlockFace> mirrordim(Pair<ServerLevel, BlockFace> inbound) {
 
@@ -26,7 +30,7 @@ public class PortalTracksSupport {
             try {
                 return new ChordPortalForcer(level);
             } catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.error("创建弦世界传送门 forcer 失败", e);
             }
             return level.getPortalForcer();
         });
@@ -41,7 +45,7 @@ public class PortalTracksSupport {
         MinecraftServer minecraftserver = level.getServer();
         ServerLevel otherLevel = minecraftserver.getLevel(resourcekey);
 
-        if (otherLevel == null || !minecraftserver.isNetherEnabled())
+        if (otherLevel == null)
             return null;
 
         BlockFace inboundTrack = inbound.getSecond();

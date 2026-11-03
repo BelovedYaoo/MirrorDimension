@@ -5,13 +5,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.EggItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import top.prefersmin.mirrordim.block.ChordPortalBlock;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
@@ -25,23 +25,29 @@ public class EggItemMixin extends Item {
         super(pProperties);
     }
 
-    // 使用鸡蛋右键玻璃即可点亮传送门
+    // 使用鸡蛋右键幽匿块框架即可点亮传送门
     @Override
     public InteractionResult useOn(UseOnContext context) {
-        if (context.getPlayer() != null) {
-            if (context.getPlayer().level().dimension() == PMDimensions.CHORD_LEVEL || context.getPlayer().level().dimension() == Level.OVERWORLD) {
-                for (Direction direction : Direction.Plane.VERTICAL) {
-                    BlockPos framePos = context.getClickedPos().relative(direction);
-                    if (((ChordPortalBlock) PMBlocks.CHORD_PORTAL.get()).trySpawnPortal(context, framePos)) {
-                        context.getLevel().playSound(context.getPlayer(), framePos, Objects.requireNonNull(ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.firework_rocket.blast"))), SoundSource.BLOCKS, 1.0F, 1.0F);
-                        return InteractionResult.CONSUME;
-                    } else {
-                        return InteractionResult.FAIL;
-                    }
-                }
+        Player player = context.getPlayer();
+        Level level = context.getLevel();
+
+        if (player == null
+                || (level.dimension() != PMDimensions.CHORD_LEVEL && level.dimension() != Level.OVERWORLD)) {
+            return super.useOn(context);
+        }
+
+        // 先试点击面，再试上/下，兼顾从侧面点击框架的情况
+        Direction[] directions = {context.getClickedFace(), Direction.UP, Direction.DOWN};
+        for (Direction direction : directions) {
+            BlockPos framePos = context.getClickedPos().relative(direction);
+            if (((ChordPortalBlock) PMBlocks.CHORD_PORTAL.get()).trySpawnPortal(context, framePos)) {
+                level.playSound(player, framePos, Objects.requireNonNull(
+                                ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.firework_rocket.blast"))),
+                        SoundSource.BLOCKS, 1.0F, 1.0F);
+                return InteractionResult.sidedSuccess(level.isClientSide());
             }
         }
-        return InteractionResult.FAIL;
-    }
 
+        return super.useOn(context);
+    }
 }

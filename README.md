@@ -31,3 +31,8 @@
 `src/main/templates/mirrordim.mixins.json` 由 Modstitch 在 `processResources` 前统一渲染；
 这样 `compatibilityLevel` 的 `${java_compatibility}` 占位符会在构建时展开，同时避免
 `filesMatching { expand(...) }` 产生 IDEA 无法解析的 `MatchingCopyAction` 警告。
+
+## 依赖与 jar-in-jar
+
+本项目没有需要随 jar 打包的第三方运行时库；Create 是可选前置，不通过 jar-in-jar 打包。
+如果后续加入运行时依赖，请按 `modstitchJiJ` / Loom `include` 的对应方式处理，并在各变体产物中检查 `META-INF/jars`。

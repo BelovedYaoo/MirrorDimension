@@ -111,6 +111,7 @@ modstitch {
             put("loader_language_version", loaderManifest.languageVersion)
             put("minecraft_version_range", loaderManifest.minecraftVersionRange)
             put("fabric_api_version_range", ">=$fabricApiVersion")
+            put("java_compatibility", "JAVA_$javaTargetVersion")
         }
     }
 
@@ -253,8 +254,3 @@ tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     }
 }
 
-tasks.named<ProcessResources>("processResources") {
-    filesMatching("mirrordim.mixins.json") {
-        expand(mapOf("java_compatibility" to "JAVA_$javaTargetVersion"))
-    }
-}

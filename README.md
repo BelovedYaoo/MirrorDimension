@@ -18,12 +18,16 @@
 
 ## 构建
 
-本机使用 `E:\Library\gradle-8.14`，不提交项目级 Gradle wrapper：
-
-```powershell
-E:\Library\gradle-8.14\bin\gradle chiseledBuild
+```bash
+./gradlew chiseledBuild
 ```
 
 需要 JDK 21。产物位于 `versions/<变体>/build/libs/mirrordim-<版本>.jar`。
 
 > `chiseledBuild` 会为所有变体生成源码后再构建；直接构建单个变体可能因为缺少生成源码而得到空 jar。
+
+## 为什么 mixins.json 放在 templates
+
+`src/main/templates/mirrordim.mixins.json` 由 Modstitch 在 `processResources` 前统一渲染；
+这样 `compatibilityLevel` 的 `${java_compatibility}` 占位符会在构建时展开，同时避免
+`filesMatching { expand(...) }` 产生 IDEA 无法解析的 `MatchingCopyAction` 警告。

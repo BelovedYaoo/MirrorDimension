@@ -59,7 +59,7 @@ jobs:
 
       - name: 构建全部变体
         # chiseledBuild 会为每个变体生成源码再构建；单独构建某个变体会因缺源码而产出空 jar
-        run: gradle chiseledBuild --no-daemon
+        run: ./gradlew chiseledBuild --no-daemon
 
       - name: 汇总产物并唯一化命名
         run: |

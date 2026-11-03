@@ -11,7 +11,6 @@ stonecutter registerChiseled tasks.register("chiseledBuild", stonecutter.chisele
 
 allprojects {
     repositories {
-        mavenLocal()
         mavenCentral()
         maven("https://maven.neoforged.net/releases")
         maven("https://maven.minecraftforge.net")

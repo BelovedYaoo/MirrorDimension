@@ -1,0 +1,37 @@
+name: 构建校验
+
+# 日常回归：主干与 PR 上跑一遍全部变体的构建，避免只靠发版时的 tag 工作流发现问题。
+# 与发版工作流分开，是为了让发版只做「构建 + 产出 Release」这一件事。
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: 准备 Gradle（含构建缓存）
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 构建全部变体
+        # chiseledBuild 会为每个变体生成源码再构建；单独构建某个变体会因缺源码而产出空 jar
+        run: ./gradlew chiseledBuild --no-daemon

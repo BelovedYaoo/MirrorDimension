@@ -98,6 +98,15 @@ public final class NeoForgeChordPortalForcer {
     }
     //?}
 
+    public Optional<BlockUtil.FoundRectangle> findOrCreateExit(BlockPos findFrom) {
+        WorldBorder worldBorder = this.level.getWorldBorder();
+        Optional<BlockUtil.FoundRectangle> found = this.findPortalAround(findFrom, worldBorder);
+        if (found.isPresent()) {
+            return found;
+        }
+        return this.createPortal(findFrom, this.sourceState.getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X));
+    }
+
     private Optional<BlockUtil.FoundRectangle> getExitPortal(Entity entity, BlockPos findFrom, WorldBorder worldBorder) {
         if (entity instanceof ServerPlayer) {
             Optional<BlockUtil.FoundRectangle> optional = this.findPortalAround(findFrom, worldBorder);

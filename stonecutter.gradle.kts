@@ -11,11 +11,15 @@ stonecutter registerChiseled tasks.register("chiseledBuild", stonecutter.chisele
 
 allprojects {
     repositories {
+        mavenLocal()
         mavenCentral()
         maven("https://maven.neoforged.net/releases")
+        maven("https://maven.minecraftforge.net")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.parchmentmc.org")
         maven("https://cursemaven.com")
+        maven("https://maven.createmod.net")
+        maven("https://maven.ithundxr.dev/snapshots")
         maven("https://api.modrinth.com/maven")
     }
 }

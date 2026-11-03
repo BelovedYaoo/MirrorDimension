@@ -51,6 +51,11 @@ public class MirrorDimension {
         PMBlocks.BLOCKS.register(modEventBus);
         PMPointOfInterests.register(modEventBus);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(top.prefersmin.mirrordim.event.PMEvents.class);
+        if (ModList.get().isLoaded("create")) {
+            //? if >=1.21.1 {
+            top.prefersmin.mirrordim.compat.CreateCompatNeoForge.register();
+            //?}
+        }
     }
     *///?}
 
@@ -61,7 +66,11 @@ public class MirrorDimension {
         PMPointOfInterests.register(bus);
 
         if (ModList.get().isLoaded("create")) {
+            //? if neoforge_legacy {
+            top.prefersmin.mirrordim.compat.CreateCompatNeoForge.register();
+            //?} else {
             top.prefersmin.mirrordim.compat.CreateCompat.register();
+            //?}
         }
 
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(top.prefersmin.mirrordim.event.PMEvents.class);

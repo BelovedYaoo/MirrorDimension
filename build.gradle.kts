@@ -8,6 +8,7 @@ fun prop(name: String, consumer: (prop: String) -> Unit) {
 
 val minecraft = property("deps.minecraft") as String
 val constraint: String = name.split("-")[1]
+val isForgeLike = constraint == "forge" || (constraint == "neoforge" && minecraft == "1.20.1")
 val modIdConst = "mirrordim"
 
 val fabricLoaderVersion = findProperty("deps.fabricLoader") as? String ?: ""
@@ -47,6 +48,14 @@ val loaderManifest = when {
         versionRange = ">=$fabricLoaderVersion",
         languageVersion = "",
         minecraftVersionRange = "~$minecraft",
+    )
+
+    constraint == "neoforge" && minecraft == "1.20.1" -> LoaderManifest(
+        // NeoForge 1.20.1 仍以 forge 作为加载器 modId（Create 6.0.8 的 mods.toml 同样如此）
+        modId = "forge",
+        versionRange = "[47.1.106,)",
+        languageVersion = "[47,)",
+        minecraftVersionRange = "[1.20.1,1.21)",
     )
 
     constraint == "neoforge" && minecraft == "1.21.1" -> LoaderManifest(
@@ -143,8 +152,9 @@ tasks.withType<ProcessResources>().configureEach {
 stonecutter {
     consts(
         "fabric" to constraint.equals("fabric"),
-        "neoforge" to constraint.equals("neoforge"),
-        "forge" to constraint.equals("forge"),
+        "neoforge" to (constraint.equals("neoforge") && minecraft == "1.21.1"),
+        "neoforge_legacy" to (constraint.equals("neoforge") && minecraft == "1.20.1"),
+        "forge" to (constraint.equals("forge") || (constraint.equals("neoforge") && minecraft == "1.20.1")),
     )
 }
 
@@ -167,9 +177,18 @@ dependencies {
 // 按平台裁剪只属于某个加载器的实现类
 if (constraint != "forge") {
     sourceSets.main {
-        java.exclude("top/prefersmin/mirrordim/compat/**")
-        java.exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+        java.exclude("**/compat/CreateCompat.java")
         java.exclude("top/prefersmin/mirrordim/world/PortalTracksSupport.java")
+    }
+}
+if (!isForgeLike) {
+    sourceSets.main {
+        java.exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+    }
+}
+if (constraint != "neoforge") {
+    sourceSets.main {
+        java.exclude("**/compat/CreateCompatNeoForge.java")
     }
 }
 if (constraint == "fabric") {
@@ -214,9 +233,14 @@ listOf("jar", "jarJar", "reobfJar", "reobfJarJar").forEach { taskName ->
 // 这里再对 compileJava 做一次显式裁剪。
 tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     if (constraint != "forge") {
-        exclude("top/prefersmin/mirrordim/compat/**")
-        exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+        exclude("**/compat/CreateCompat.java")
         exclude("top/prefersmin/mirrordim/world/PortalTracksSupport.java")
+    }
+    if (!isForgeLike) {
+        exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+    }
+    if (constraint != "neoforge") {
+        exclude("**/compat/CreateCompatNeoForge.java")
     }
     if (constraint == "fabric") {
         exclude("top/prefersmin/mirrordim/event/PMEvents.java")

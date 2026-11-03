@@ -23,7 +23,7 @@ stonecutter {
     centralScript = "build.gradle.kts"
 
     create(rootProject) {
-        // 先以 1.20.1 Forge 作为基准变体，后续在此追加 1.21.1 / Fabric 等目标。
+        // 当前覆盖 Create 支持的 Minecraft 版本：1.19.2 / 1.20.1 / 1.21.1。
         vers("1.19.2-forge", "1.19.2")
         vers("1.20.1-forge", "1.20.1")
         vers("1.21.1-neoforge", "1.21.1")

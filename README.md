@@ -1,6 +1,6 @@
 # MirrorDimension
 
-为 Minecraft 添加「弦世界」维度的 Forge 模组。
+为 Minecraft 添加「弦世界」维度的 Forge / NeoForge 模组。
 
 ## 当前变体
 
@@ -13,12 +13,12 @@
 
 ## 构建
 
-需要 JDK 21：
+本机使用 `E:\Library\gradle-8.14`，不提交项目级 Gradle wrapper：
 
-```bash
-./gradlew chiseledBuild
+```powershell
+E:\Library\gradle-8.14\bin\gradle chiseledBuild
 ```
 
-产物位于 `versions/<变体>/build/libs/mirrordim-<版本>.jar`。
+需要 JDK 21。产物位于 `versions/<变体>/build/libs/mirrordim-<版本>.jar`。
 
 > `chiseledBuild` 会为所有变体生成源码后再构建；直接构建单个变体可能因为缺少生成源码而得到空 jar。

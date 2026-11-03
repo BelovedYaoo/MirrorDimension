@@ -15,7 +15,6 @@ jobs:
     steps:
       - name: 检出（取全量历史，判断 tag 指向需要祖先关系）
         uses: actions/checkout@v4
-        with:
           fetch-depth: 0
 
       - name: 校验注解 tag 与指向
@@ -48,14 +47,11 @@ jobs:
 
       - name: 安装 JDK 21
         uses: actions/setup-java@v4
-        with:
           distribution: temurin
           java-version: '21'
 
       - name: 准备 Gradle（含构建缓存）
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.14
 
       - name: 构建全部变体
         # chiseledBuild 会为每个变体生成源码再构建；单独构建某个变体会因缺源码而产出空 jar

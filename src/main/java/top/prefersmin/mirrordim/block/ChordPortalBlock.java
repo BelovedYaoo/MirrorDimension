@@ -4,9 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
@@ -27,18 +27,12 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.registries.ForgeRegistries;
 import top.prefersmin.mirrordim.MirrorDimension;
-import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.util.MinecraftCompat;
-import top.prefersmin.mirrordim.world.ChordPortalForcer;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 public class ChordPortalBlock extends Block {
 
@@ -77,7 +71,16 @@ public class ChordPortalBlock extends Block {
     }
 
     public static boolean onTrySpawnPortal(LevelAccessor world, BlockPos pos, PMPortalShape size) {
-        return MinecraftForge.EVENT_BUS.post(new BlockEvent.PortalSpawnEvent(world, pos, world.getBlockState(pos), size));
+        //? if forge {
+        return net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                new net.minecraftforge.event.level.BlockEvent.PortalSpawnEvent(world, pos, world.getBlockState(pos), size));
+        //?}
+        //? if neoforge {
+        net.neoforged.neoforge.event.level.BlockEvent.PortalSpawnEvent event =
+                new net.neoforged.neoforge.event.level.BlockEvent.PortalSpawnEvent(world, pos, world.getBlockState(pos), size);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(event);
+        return event.isCanceled();
+        //?}
     }
 
     @Nullable
@@ -101,14 +104,10 @@ public class ChordPortalBlock extends Block {
 
     @Override
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (!entity.isPassenger() && !entity.isVehicle() && entity.canChangeDimensions()) {
+        if (!entity.isPassenger() && !entity.isVehicle() && MinecraftCompat.canChangeDimensions(entity, level, level)) {
             if (entity.isOnPortalCooldown()) {
                 entity.setPortalCooldown();
             } else {
-                EntityAccessor accessor = (EntityAccessor) entity;
-                if (!MinecraftCompat.level(entity).isClientSide() && !pos.equals(accessor.getPortalEntrancePos())) {
-                    accessor.setPortalEntrancePos(pos.immutable());
-                }
                 Level level1 = MinecraftCompat.level(entity);
                 MinecraftServer minecraftserver = level1.getServer();
                 ResourceKey<Level> destination = MinecraftCompat.level(entity).dimension() == PMDimensions.CHORD_LEVEL ? Level.OVERWORLD : PMDimensions.CHORD_LEVEL;
@@ -117,7 +116,16 @@ public class ChordPortalBlock extends Block {
                     if (destinationWorld != null && !entity.isPassenger()) {
                         MinecraftCompat.level(entity).getProfiler().push("chord_portal");
                         entity.setPortalCooldown();
-                        entity.changeDimension(destinationWorld, new ChordPortalForcer(destinationWorld));
+                        //? if neoforge {
+                        net.minecraft.world.level.portal.DimensionTransition transition =
+                                new top.prefersmin.mirrordim.world.NeoForgeChordPortalForcer(destinationWorld, state, pos).createTransition(entity);
+                        if (transition != null) {
+                            entity.changeDimension(transition);
+                        }
+                        //?} else {
+                        entity.changeDimension(destinationWorld,
+                                new top.prefersmin.mirrordim.world.ChordPortalForcer(destinationWorld, state, pos));
+                        //?}
                         MinecraftCompat.level(entity).getProfiler().pop();
                     }
                 }
@@ -129,7 +137,7 @@ public class ChordPortalBlock extends Block {
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         if (random.nextInt(100) == 0) {
-            level.playLocalSound((double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D, Objects.requireNonNull(ForgeRegistries.SOUND_EVENTS.getValue(new ResourceLocation("entity.firework_rocket.blast"))), SoundSource.BLOCKS, 0.5F, random.nextFloat() * 0.4F + 0.8F, false);
+            level.playLocalSound((double) pos.getX() + 0.5D, (double) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D, SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.BLOCKS, 0.5F, random.nextFloat() * 0.4F + 0.8F, false);
         }
 
         for (int i = 0; i < 4; ++i) {
@@ -153,10 +161,12 @@ public class ChordPortalBlock extends Block {
 
     }
 
+    //? if <1.21.1 {
     @Override
     public ItemStack getCloneItemStack(BlockGetter level, BlockPos pos, BlockState state) {
         return ItemStack.EMPTY;
     }
+    //?}
 
     @Override
     public BlockState rotate(BlockState state, Rotation rot) {

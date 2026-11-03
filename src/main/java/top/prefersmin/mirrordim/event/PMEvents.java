@@ -1,15 +1,21 @@
 package top.prefersmin.mirrordim.event;
 
 import net.minecraft.server.level.ServerLevel;
+
+//? if forge {
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.SleepFinishedTimeEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import top.prefersmin.mirrordim.MirrorDimension;
+//?}
+//? if neoforge {
+/*import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
+*///?}
+
 import top.prefersmin.mirrordim.block.ChordPortalBlock;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 
-@Mod.EventBusSubscriber(modid = MirrorDimension.MODID)
 public final class PMEvents {
 
     private PMEvents() {

@@ -3,6 +3,7 @@ package top.prefersmin.mirrordim.util;
 import net.minecraft.BlockUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -10,8 +11,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.PushReaction;
+//? if <1.21.1 {
 import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.level.portal.PortalShape;
+//?}
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -43,6 +46,22 @@ public final class MinecraftCompat {
         return properties;
     }
 
+    public static ResourceLocation id(String namespace, String path) {
+        //? if >=1.21.1 {
+        return ResourceLocation.fromNamespaceAndPath(namespace, path);
+        //?} else {
+        return new ResourceLocation(namespace, path);
+        //?}
+    }
+
+    public static boolean canChangeDimensions(Entity entity, Level from, Level to) {
+        //? if >=1.21.1 {
+        return entity.canChangeDimensions(from, to);
+        //?} else {
+        return entity.canChangeDimensions();
+        //?}
+    }
+
     public static Level level(Entity entity) {
         //? if >=1.20 {
         return entity.level();
@@ -63,6 +82,7 @@ public final class MinecraftCompat {
         return new BlockPos(Mth.floor(pos.x), Mth.floor(pos.y), Mth.floor(pos.z));
     }
 
+    //? if <1.21.1 {
     public static PortalInfo createPortalInfo(ServerLevel level, BlockUtil.FoundRectangle rectangle,
                                               Direction.Axis axis, Vec3 offset, Entity entity,
                                               Vec3 velocity, float yaw, float pitch) {
@@ -73,4 +93,5 @@ public final class MinecraftCompat {
                 entity.getDimensions(entity.getPose()), velocity, yaw, pitch);
         //?}
     }
+    //?}
 }

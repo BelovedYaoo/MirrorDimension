@@ -16,21 +16,23 @@ import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.util.ITeleporter;
 import org.slf4j.Logger;
-import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.util.MinecraftCompat;
-
-import java.util.function.Function;
 
 public class PortalTracksSupport {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    @FunctionalInterface
+    public interface PortalForcerFactory {
+        ITeleporter create(ServerLevel level, BlockState state, BlockPos pos);
+    }
+
     public static Pair<ServerLevel, BlockFace> mirrordim(Pair<ServerLevel, BlockFace> inbound) {
 
-        return standardPortalProvider(inbound, Level.OVERWORLD, PMDimensions.CHORD_LEVEL, level -> {
+        return standardPortalProvider(inbound, Level.OVERWORLD, PMDimensions.CHORD_LEVEL, (level, state, pos) -> {
             try {
-                return new ChordPortalForcer(level);
+                return new ChordPortalForcer(level, state, pos);
             } catch (Exception e) {
                 LOGGER.error("创建弦世界传送门 forcer 失败", e);
             }
@@ -41,7 +43,7 @@ public class PortalTracksSupport {
 
     public static Pair<ServerLevel, BlockFace> standardPortalProvider(Pair<ServerLevel, BlockFace> inbound,
                                                                       ResourceKey<Level> firstDimension, ResourceKey<Level> secondDimension,
-                                                                      Function<ServerLevel, ITeleporter> customPortalForcer) {
+                                                                      PortalForcerFactory customPortalForcer) {
         ServerLevel level = inbound.getFirst();
         ResourceKey<Level> resourcekey = level.dimension() == secondDimension ? firstDimension : secondDimension;
         MinecraftServer minecraftserver = level.getServer();
@@ -53,16 +55,13 @@ public class PortalTracksSupport {
         BlockFace inboundTrack = inbound.getSecond();
         BlockPos portalPos = inboundTrack.getConnectedPos();
         BlockState portalState = level.getBlockState(portalPos);
-        ITeleporter teleporter = customPortalForcer.apply(otherLevel);
+        ITeleporter teleporter = customPortalForcer.create(otherLevel, portalState, portalPos);
 
         SuperGlueEntity probe = new SuperGlueEntity(level, new AABB(portalPos));
         probe.setYRot(inboundTrack.getFace()
                 .toYRot());
-        probe.setPortalEntrancePos();
-
-        // 通过 EntityAccessor 调用 protected 的 findDimensionEntryPoint
-        PortalInfo portalinfo = teleporter.getPortalInfo(probe, otherLevel,
-                destination -> ((EntityAccessor) probe).callFindDimensionEntryPoint(destination));
+        // ChordPortalForcer 自行读取 sourceState/sourcePos，不需要默认的 findDimensionEntryPoint
+        PortalInfo portalinfo = teleporter.getPortalInfo(probe, otherLevel, destination -> null);
         if (portalinfo == null)
             return null;
 

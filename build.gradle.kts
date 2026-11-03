@@ -12,18 +12,21 @@ val modIdConst = "mirrordim"
 // 1.20.1 运行时是 Java 17；Modstitch 要求构建 JVM 至少为 21
 val javaTargetVersion = when (minecraft) {
     "1.19.2", "1.20.1" -> 17
+    "1.21.1" -> 21
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记 Java 版本")
 }
 
 val resourcePackFormat = when (minecraft) {
     "1.19.2" -> 9
     "1.20.1" -> 15
+    "1.21.1" -> 34
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记资源包格式")
 }
 
 val dataPackFormat = when (minecraft) {
     "1.19.2" -> 9
     "1.20.1" -> 15
+    "1.21.1" -> 34
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记数据包格式")
 }
 
@@ -47,6 +50,13 @@ val loaderManifest = when (minecraft) {
         versionRange = "[47,)",
         languageVersion = "[47,)",
         minecraftVersionRange = "[1.20.1,1.21)",
+    )
+
+    "1.21.1" -> LoaderManifest(
+        modId = "neoforge",
+        versionRange = "[21.1,)",
+        languageVersion = "[4,)",
+        minecraftVersionRange = "[1.21,1.21.2)",
     )
 
     else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记加载器清单")
@@ -87,6 +97,7 @@ modstitch {
     moddevgradle {
         enable {
             prop("deps.forge") { forgeVersion = it }
+            prop("deps.neoforge") { neoForgeVersion = it }
         }
         defaultRuns()
         configureNeoforge {
@@ -115,12 +126,28 @@ stonecutter {
 
 dependencies {
     // Create 是可选兼容：编译期需要，运行期不强制安装
-    when (minecraft) {
-        "1.19.2" -> modCompileOnly("maven.modrinth:create:tJVykywJ")
-        "1.20.1" -> modCompileOnly("curse.maven:create-328085:4835191")
+    if (constraint == "forge") {
+        when (minecraft) {
+            "1.19.2" -> add("modCompileOnly", "maven.modrinth:create:tJVykywJ")
+            "1.20.1" -> add("modCompileOnly", "curse.maven:create-328085:4835191")
+        }
     }
 
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
+}
+
+// 按平台裁剪只属于某个加载器的实现类
+if (constraint != "forge") {
+    sourceSets.main {
+        java.exclude("top/prefersmin/mirrordim/compat/**")
+        java.exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+        java.exclude("top/prefersmin/mirrordim/world/PortalTracksSupport.java")
+    }
+}
+if (constraint != "neoforge") {
+    sourceSets.main {
+        java.exclude("top/prefersmin/mirrordim/world/NeoForgeChordPortalForcer.java")
+    }
 }
 
 // Modstitch 在 legacyforge 平台会无条件要求 refmap；

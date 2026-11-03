@@ -6,8 +6,7 @@
   "refmap": "mirrordim.refmap.json",
   "plugin": "top.prefersmin.mirrordim.mixin.MixinPlugin",
   "mixins": [
-    "EggItemMixin",
-    "EntityAccessor"
+    "EggItemMixin"
   ],
   "client": [],
   "injectors": {

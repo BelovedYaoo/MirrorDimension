@@ -20,11 +20,11 @@ import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.portal.PortalInfo;
+import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.ITeleporter;
 import top.prefersmin.mirrordim.MirrorDimension;
 import top.prefersmin.mirrordim.block.ChordPortalBlock;
-import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.registry.PMPointOfInterests;
@@ -41,9 +41,13 @@ public class ChordPortalForcer implements ITeleporter {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final ServerLevel level;
+    private final BlockState sourceState;
+    private final BlockPos sourcePos;
 
-    public ChordPortalForcer(ServerLevel level) {
+    public ChordPortalForcer(ServerLevel level, BlockState sourceState, BlockPos sourcePos) {
         this.level = level;
+        this.sourceState = sourceState;
+        this.sourcePos = sourcePos;
     }
 
     @Override
@@ -64,15 +68,14 @@ public class ChordPortalForcer implements ITeleporter {
             double scale = DimensionType.getTeleportationScale(MinecraftCompat.level(entity).dimensionType(), destinationLevel.dimensionType());
             BlockPos scaledEntityPos = worldBorder.clampToBounds(entity.getX() * scale, entity.getY(), entity.getZ() * scale);
             return this.getExitPortal(entity, scaledEntityPos, worldBorder).map((rectangle) -> {
-                EntityAccessor accessor = (EntityAccessor) entity;
-                BlockPos entrancePos = accessor.getPortalEntrancePos();
-                BlockState blockState = MinecraftCompat.level(entity).getBlockState(entrancePos);
+                BlockPos entrancePos = this.sourcePos;
+                BlockState blockState = this.sourceState;
                 Direction.Axis axis;
                 Vec3 vec3;
                 if (blockState.hasProperty(BlockStateProperties.HORIZONTAL_AXIS)) {
                     axis = blockState.getValue(BlockStateProperties.HORIZONTAL_AXIS);
                     BlockUtil.FoundRectangle foundRectangle = BlockUtil.getLargestRectangleAround(entrancePos, axis, 21, Direction.Axis.Y, 21, (blockPos) -> MinecraftCompat.level(entity).getBlockState(blockPos) == blockState);
-                    vec3 = accessor.callGetRelativePortalPosition(axis, foundRectangle);
+                    vec3 = PortalShape.getRelativePosition(foundRectangle, axis, entity.position(), entity.getDimensions(entity.getPose()));
                 } else {
                     axis = Direction.Axis.X;
                     vec3 = new Vec3(0.5, 0.0, 0.0);
@@ -88,8 +91,7 @@ public class ChordPortalForcer implements ITeleporter {
             if (optional.isPresent()) {
                 return optional;
             } else {
-                BlockPos entrancePos = ((EntityAccessor) entity).getPortalEntrancePos();
-                Direction.Axis direction$axis = MinecraftCompat.level(entity).getBlockState(entrancePos).getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
+                Direction.Axis direction$axis = this.sourceState.getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
                 Optional<BlockUtil.FoundRectangle> portalOptional = this.createPortal(findFrom, direction$axis);
                 if (portalOptional.isEmpty()) {
                     LOGGER.warn("无法创建弦世界传送门，目标位置可能超出世界边界");
@@ -105,7 +107,7 @@ public class ChordPortalForcer implements ITeleporter {
     private Optional<BlockUtil.FoundRectangle> findPortalAround(BlockPos pos, WorldBorder worldBorder) {
         PoiManager poiManager = this.level.getPoiManager();
         poiManager.ensureLoadedAndValid(this.level, pos, 128);
-        ResourceLocation portal = net.minecraftforge.registries.ForgeRegistries.POI_TYPES.getKey(PMPointOfInterests.CHORD_PORTAL.get());
+        ResourceLocation portal = PMPointOfInterests.CHORD_PORTAL_ID;
         if (portal != null) {
             Optional<PoiRecord> optionalPoi = poiManager.getInSquare((poiType) -> poiType.is(portal), pos, 128, PoiManager.Occupancy.ANY)
                     .filter((poiRecord) -> worldBorder.isWithinBounds(poiRecord.getPos()))

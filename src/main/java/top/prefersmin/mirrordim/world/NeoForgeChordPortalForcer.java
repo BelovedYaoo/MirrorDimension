@@ -19,7 +19,9 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.Heightmap;
+//? if neoforge || fabric && >=1.21.1 {
 import net.minecraft.world.level.portal.DimensionTransition;
+//?}
 import net.minecraft.world.level.portal.PortalShape;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
@@ -51,6 +53,7 @@ public final class NeoForgeChordPortalForcer {
         this.sourcePos = sourcePos;
     }
 
+    //? if neoforge || fabric && >=1.21.1 {
     public DimensionTransition createTransition(Entity entity) {
         boolean isChord = this.level.dimension() == PMDimensions.CHORD_LEVEL;
         if (entity.level().dimension() != PMDimensions.CHORD_LEVEL && !isChord) {
@@ -93,6 +96,7 @@ public final class NeoForgeChordPortalForcer {
                 + (axis == Direction.Axis.X ? 0.5D + relative.z : dimensions.width() / 2.0D + width * relative.x);
         return new Vec3(x, y, z);
     }
+    //?}
 
     private Optional<BlockUtil.FoundRectangle> getExitPortal(Entity entity, BlockPos findFrom, WorldBorder worldBorder) {
         if (entity instanceof ServerPlayer) {

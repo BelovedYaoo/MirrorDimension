@@ -7,9 +7,13 @@ fun prop(name: String, consumer: (prop: String) -> Unit) {
 }
 
 val minecraft = property("deps.minecraft") as String
+val constraint: String = name.split("-")[1]
 val modIdConst = "mirrordim"
 
-// 1.20.1 运行时是 Java 17；Modstitch 要求构建 JVM 至少为 21
+val fabricLoaderVersion = findProperty("deps.fabricLoader") as? String ?: ""
+val fabricApiVersion = findProperty("deps.fabricApi") as? String ?: ""
+
+// 构建 JVM 由 Modstitch 要求为 21+；产物字节码按 Minecraft 版本选择
 val javaTargetVersion = when (minecraft) {
     "1.19.2", "1.20.1" -> 17
     "1.21.1" -> 21
@@ -37,29 +41,36 @@ data class LoaderManifest(
     val minecraftVersionRange: String,
 )
 
-val loaderManifest = when (minecraft) {
-    "1.19.2" -> LoaderManifest(
-        modId = "forge",
-        versionRange = "[43,)",
-        languageVersion = "[43,)",
-        minecraftVersionRange = "[1.19.2,1.20)",
+val loaderManifest = when {
+    constraint == "fabric" -> LoaderManifest(
+        modId = "fabricloader",
+        versionRange = ">=$fabricLoaderVersion",
+        languageVersion = "",
+        minecraftVersionRange = "~$minecraft",
     )
 
-    "1.20.1" -> LoaderManifest(
-        modId = "forge",
-        versionRange = "[47,)",
-        languageVersion = "[47,)",
-        minecraftVersionRange = "[1.20.1,1.21)",
-    )
-
-    "1.21.1" -> LoaderManifest(
+    constraint == "neoforge" && minecraft == "1.21.1" -> LoaderManifest(
         modId = "neoforge",
         versionRange = "[21.1,)",
         languageVersion = "[4,)",
         minecraftVersionRange = "[1.21,1.21.2)",
     )
 
-    else -> throw IllegalArgumentException("请先为 Minecraft $minecraft 登记加载器清单")
+    constraint == "forge" && minecraft == "1.19.2" -> LoaderManifest(
+        modId = "forge",
+        versionRange = "[43,)",
+        languageVersion = "[43,)",
+        minecraftVersionRange = "[1.19.2,1.20)",
+    )
+
+    constraint == "forge" && minecraft == "1.20.1" -> LoaderManifest(
+        modId = "forge",
+        versionRange = "[47,)",
+        languageVersion = "[47,)",
+        minecraftVersionRange = "[1.20.1,1.21)",
+    )
+
+    else -> throw IllegalArgumentException("请先为 $minecraft + $constraint 登记加载器清单")
 }
 
 modstitch {
@@ -90,21 +101,28 @@ modstitch {
             put("loader_version_range", loaderManifest.versionRange)
             put("loader_language_version", loaderManifest.languageVersion)
             put("minecraft_version_range", loaderManifest.minecraftVersionRange)
+            put("fabric_api_version_range", ">=$fabricApiVersion")
         }
     }
 
-    // 1.20.1 Forge 走 ModDevGradle 的 legacyforge 平台
-    moddevgradle {
-        enable {
-            prop("deps.forge") { forgeVersion = it }
-            prop("deps.neoforge") { neoForgeVersion = it }
+    if (constraint == "fabric") {
+        // Fabric：Loom + Fabric API；源码使用 Mojang 官方映射 + Parchment
+        loom {
+            prop("deps.fabricLoader") { fabricLoaderVersion = it }
         }
-        defaultRuns()
-        configureNeoforge {
-            // Forge 47.2.20 自带的 AT 在 MDG 的严格校验下会报“record 需要同时放宽构造器”等警告；
-            // 这里关闭校验，避免上游 AT 阻止玩家侧开发环境构建。
-            validateAccessTransformers = false
-            runs.all { disableIdeRun() }
+    } else {
+        // Forge / NeoForge：ModDevGradle
+        moddevgradle {
+            enable {
+                prop("deps.forge") { forgeVersion = it }
+                prop("deps.neoforge") { neoForgeVersion = it }
+            }
+            defaultRuns()
+            configureNeoforge {
+                // 上游 AT 的严格校验会阻止开发环境构建；这里关闭校验
+                validateAccessTransformers = false
+                runs.all { disableIdeRun() }
+            }
         }
     }
 
@@ -114,8 +132,14 @@ modstitch {
     }
 }
 
-// Stonecutter 常量，后续给加载器差异代码使用
-val constraint: String = name.split("-")[1]
+// 只保留当前变体对应的加载器清单
+val otherLoaderManifests =
+    listOf("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "fabric.mod.json") - modstitch.modLoaderManifest
+tasks.withType<ProcessResources>().configureEach {
+    exclude(otherLoaderManifests)
+}
+
+// Stonecutter 常量，供注释守卫使用
 stonecutter {
     consts(
         "fabric" to constraint.equals("fabric"),
@@ -132,7 +156,11 @@ dependencies {
             "1.20.1" -> add("modCompileOnly", "curse.maven:create-328085:4835191")
         }
     }
+    if (constraint == "fabric") {
+        add("modImplementation", "net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    }
 
+    compileOnly("com.google.code.findbugs:jsr305:3.0.2")
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
 }
 
@@ -144,14 +172,24 @@ if (constraint != "forge") {
         java.exclude("top/prefersmin/mirrordim/world/PortalTracksSupport.java")
     }
 }
-if (constraint != "neoforge") {
+if (constraint == "fabric") {
     sourceSets.main {
-        java.exclude("top/prefersmin/mirrordim/world/NeoForgeChordPortalForcer.java")
+        // Fabric 侧暂不实现 Forge 式的 PortalSpawnEvent / SleepFinishedTimeEvent
+        java.exclude("top/prefersmin/mirrordim/event/PMEvents.java")
+    }
+}
+if (constraint == "fabric" && minecraft != "1.21.1") {
+    sourceSets.main {
+        java.exclude("**/NeoForgeChordPortalForcer.java")
+    }
+}
+if (constraint != "fabric" || minecraft == "1.21.1") {
+    sourceSets.main {
+        java.exclude("**/FabricChordPortalForcer.java")
     }
 }
 
-// Modstitch 在 legacyforge 平台会无条件要求 refmap；
-// 如果 Mixin AP 没有产出（例如当前源集没有可处理 Mixin），补一份空 refmap。
+// Modstitch 在 legacyforge 平台会无条件要求 refmap；如果 AP 没有产出，补空文件
 val refmapModId = modIdConst
 val provideEmptyRefmap = tasks.register("provideEmptyRefmap") {
     val mixinDir = layout.buildDirectory.dir("mixin")
@@ -169,5 +207,30 @@ val provideEmptyRefmap = tasks.register("provideEmptyRefmap") {
 listOf("jar", "jarJar", "reobfJar", "reobfJarJar").forEach { taskName ->
     tasks.matching { it.name == taskName }.configureEach {
         dependsOn(provideEmptyRefmap)
+    }
+}
+
+// 某些 Modstitch/Stonecutter 版本下 sourceSets 的 exclude 不会传递到 chiseledSrc 的编译任务，
+// 这里再对 compileJava 做一次显式裁剪。
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    if (constraint != "forge") {
+        exclude("top/prefersmin/mirrordim/compat/**")
+        exclude("top/prefersmin/mirrordim/world/ChordPortalForcer.java")
+        exclude("top/prefersmin/mirrordim/world/PortalTracksSupport.java")
+    }
+    if (constraint == "fabric") {
+        exclude("top/prefersmin/mirrordim/event/PMEvents.java")
+    }
+    if (constraint == "fabric" && minecraft != "1.21.1") {
+        exclude("**/NeoForgeChordPortalForcer.java")
+    }
+    if (constraint != "fabric" || minecraft == "1.21.1") {
+        exclude("**/FabricChordPortalForcer.java")
+    }
+}
+
+tasks.named<ProcessResources>("processResources") {
+    filesMatching("mirrordim.mixins.json") {
+        expand(mapOf("java_compatibility" to "JAVA_$javaTargetVersion"))
     }
 }

@@ -26,6 +26,9 @@ stonecutter {
         // 当前覆盖 Create 支持的 Minecraft 版本：1.19.2 / 1.20.1 / 1.21.1。
         vers("1.19.2-forge", "1.19.2")
         vers("1.20.1-forge", "1.20.1")
+        vers("1.19.2-fabric", "1.19.2")
+        vers("1.20.1-fabric", "1.20.1")
+        vers("1.21.1-fabric", "1.21.1")
         vers("1.21.1-neoforge", "1.21.1")
 
         // src/ 以该变体的代码形态提交，其它变体由 Stonecutter 预处理生成

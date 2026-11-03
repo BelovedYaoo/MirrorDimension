@@ -81,6 +81,9 @@ public class ChordPortalBlock extends Block {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(event);
         return event.isCanceled();
         //?}
+        //? if fabric {
+        return false;
+        //?}
     }
 
     @Nullable
@@ -122,7 +125,22 @@ public class ChordPortalBlock extends Block {
                         if (transition != null) {
                             entity.changeDimension(transition);
                         }
-                        //?} else {
+                        //?}
+                        //? if fabric && <1.21.1 {
+                        var portalInfo = new top.prefersmin.mirrordim.world.FabricChordPortalForcer(destinationWorld, state, pos)
+                                .getPortalInfo(entity, destinationWorld);
+                        if (portalInfo != null) {
+                            net.fabricmc.fabric.api.dimension.v1.FabricDimensions.teleport(entity, destinationWorld, portalInfo);
+                        }
+                        //?}
+                        //? if fabric && >=1.21.1 {
+                        net.minecraft.world.level.portal.DimensionTransition transition =
+                                new top.prefersmin.mirrordim.world.NeoForgeChordPortalForcer(destinationWorld, state, pos).createTransition(entity);
+                        if (transition != null) {
+                            entity.changeDimension(transition);
+                        }
+                        //?}
+                        //? if forge {
                         entity.changeDimension(destinationWorld,
                                 new top.prefersmin.mirrordim.world.ChordPortalForcer(destinationWorld, state, pos));
                         //?}

@@ -16,6 +16,7 @@ import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.util.ITeleporter;
 import org.slf4j.Logger;
+import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 
 import java.util.function.Function;
@@ -58,8 +59,9 @@ public class PortalTracksSupport {
                 .toYRot());
         probe.setPortalEntrancePos();
 
-        // 记得使用accesstransformer拓宽findDimensionEntryPoint方法的访问权限
-        PortalInfo portalinfo = teleporter.getPortalInfo(probe, otherLevel, probe::findDimensionEntryPoint);
+        // 通过 EntityAccessor 调用 protected 的 findDimensionEntryPoint
+        PortalInfo portalinfo = teleporter.getPortalInfo(probe, otherLevel,
+                destination -> ((EntityAccessor) probe).callFindDimensionEntryPoint(destination));
         if (portalinfo == null)
             return null;
 

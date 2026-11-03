@@ -1,15 +1,15 @@
 {
   "required": true,
+  "minVersion": "0.8",
   "package": "top.prefersmin.mirrordim.mixin",
   "compatibilityLevel": "JAVA_17",
-  "minVersion": "0.8",
-  "refmap": "mixins.mirrordim.refmap.json",
+  "refmap": "mirrordim.refmap.json",
   "plugin": "top.prefersmin.mirrordim.mixin.MixinPlugin",
   "mixins": [
-    "EggItemMixin"
+    "EggItemMixin",
+    "EntityAccessor"
   ],
-  "client": [
-  ],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
   }

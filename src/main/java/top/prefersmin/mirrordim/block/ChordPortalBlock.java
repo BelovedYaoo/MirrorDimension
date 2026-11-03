@@ -32,6 +32,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 import top.prefersmin.mirrordim.MirrorDimension;
+import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.world.ChordPortalForcer;
@@ -110,8 +111,9 @@ public class ChordPortalBlock extends Block {
             if (entity.isOnPortalCooldown()) {
                 entity.setPortalCooldown();
             } else {
-                if (!entity.level().isClientSide() && !pos.equals(entity.portalEntrancePos)) {
-                    entity.portalEntrancePos = pos.immutable();
+                EntityAccessor accessor = (EntityAccessor) entity;
+                if (!entity.level().isClientSide() && !pos.equals(accessor.getPortalEntrancePos())) {
+                    accessor.setPortalEntrancePos(pos.immutable());
                 }
                 Level level1 = entity.level();
                 MinecraftServer minecraftserver = level1.getServer();

@@ -26,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.ITeleporter;
 import top.prefersmin.mirrordim.MirrorDimension;
 import top.prefersmin.mirrordim.block.ChordPortalBlock;
+import top.prefersmin.mirrordim.mixin.EntityAccessor;
 import top.prefersmin.mirrordim.registry.PMBlocks;
 import top.prefersmin.mirrordim.registry.PMDimensions;
 import top.prefersmin.mirrordim.registry.PMPointOfInterests;
@@ -64,13 +65,15 @@ public class ChordPortalForcer implements ITeleporter {
             double scale = DimensionType.getTeleportationScale(entity.level().dimensionType(), destinationLevel.dimensionType());
             BlockPos scaledEntityPos = worldBorder.clampToBounds(entity.getX() * scale, entity.getY(), entity.getZ() * scale);
             return this.getExitPortal(entity, scaledEntityPos, worldBorder).map((rectangle) -> {
-                BlockState blockState = entity.level().getBlockState(entity.portalEntrancePos);
+                EntityAccessor accessor = (EntityAccessor) entity;
+                BlockPos entrancePos = accessor.getPortalEntrancePos();
+                BlockState blockState = entity.level().getBlockState(entrancePos);
                 Direction.Axis axis;
                 Vec3 vec3;
                 if (blockState.hasProperty(BlockStateProperties.HORIZONTAL_AXIS)) {
                     axis = blockState.getValue(BlockStateProperties.HORIZONTAL_AXIS);
-                    BlockUtil.FoundRectangle foundRectangle = BlockUtil.getLargestRectangleAround(entity.portalEntrancePos, axis, 21, Direction.Axis.Y, 21, (blockPos) -> entity.level().getBlockState(blockPos) == blockState);
-                    vec3 = entity.getRelativePortalPosition(axis, foundRectangle);
+                    BlockUtil.FoundRectangle foundRectangle = BlockUtil.getLargestRectangleAround(entrancePos, axis, 21, Direction.Axis.Y, 21, (blockPos) -> entity.level().getBlockState(blockPos) == blockState);
+                    vec3 = accessor.callGetRelativePortalPosition(axis, foundRectangle);
                 } else {
                     axis = Direction.Axis.X;
                     vec3 = new Vec3(0.5, 0.0, 0.0);
@@ -86,7 +89,8 @@ public class ChordPortalForcer implements ITeleporter {
             if (optional.isPresent()) {
                 return optional;
             } else {
-                Direction.Axis direction$axis = entity.level().getBlockState(entity.portalEntrancePos).getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
+                BlockPos entrancePos = ((EntityAccessor) entity).getPortalEntrancePos();
+                Direction.Axis direction$axis = entity.level().getBlockState(entrancePos).getOptionalValue(ChordPortalBlock.AXIS).orElse(Direction.Axis.X);
                 Optional<BlockUtil.FoundRectangle> portalOptional = this.createPortal(findFrom, direction$axis);
                 if (portalOptional.isEmpty()) {
                     LOGGER.warn("无法创建弦世界传送门，目标位置可能超出世界边界");
